@@ -3,12 +3,15 @@ const ma = @import("miniaudio");
 const wtf = @import("../src/tmp.zig");
 
 const AudioEngine = @import("miniaudio").AudioEngine;
-const SoundGroup = @import("miniaudio").SoundGroup;
 const Sound = @import("miniaudio").Sound;
-const PassThroughEffect = @import("miniaudio").PassThroughEffect;
+const SfxrPreset = @import("miniaudio").sfxr.SfxrPreset;
+const SfxrDataSource = @import("miniaudio").sfxr.SfxrDataSource;
+
+var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+pub var mainAllocator: std.mem.Allocator = arena.allocator();
 
 pub fn main() !void {
-    var e = try AudioEngine.create(std.testing.allocator);
+    var e = try AudioEngine.create(&mainAllocator);
     defer e.destroy();
 
     std.debug.print("\nq: quit\nc: sfxr coin\nh: sfxr hurt\nj: sfxr jump\nb: sfxr blip\ne: sfxr explosion\nl: sfxr laser\np: sfxr power up\n", .{});
@@ -31,11 +34,12 @@ pub fn main() !void {
     }
 }
 
-fn sfxr(preset: ma.SfxrPreset, e: *AudioEngine) void {
-    var rng = std.rand.DefaultPrng.init(@intCast(u64, std.time.timestamp()));
+fn sfxr(preset: SfxrPreset, e: *AudioEngine) void {
+    var prng = std.rand.DefaultPrng.init(@intCast(u64, std.time.timestamp()));
+    var rng = prng.random();
 
-    var sf = ma.SfxrDataSource.create(e) catch unreachable;
-    sf.loadPreset(preset, rng.random.int(u64));
+    var sf = SfxrDataSource.create(e) catch unreachable;
+    sf.loadPreset(preset, rng.int(u64));
 
     var sound = sf.createSound() catch unreachable;
     sound.start();

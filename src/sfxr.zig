@@ -1,13 +1,16 @@
 const std = @import("std");
-usingnamespace @import("c.zig").ma;
+const ma = @cImport({
+    @cInclude("miniaudio.h");
+});
 
 const AudioEngine = @import("miniaudio.zig").AudioEngine;
 const Sound = @import("miniaudio.zig").Sound;
 
-var rng = std.rand.DefaultPrng.init(0x12345678);
+var prng = std.rand.DefaultPrng.init(0x12345678);
+var rng = prng.random();
 
 fn rnd(val: i32) i32 {
-    return @mod(rng.random.int(i32), val + 1);
+    return @mod(rng.int(i32), val + 1);
 }
 
 fn frnd(range: f32) f32 {
@@ -69,7 +72,7 @@ const SfxrParams = extern struct {
 
     fn loadPreset(self: *SfxrParams, preset: SfxrPreset, seed: u64) void {
         self.reset();
-        rng.seed(seed);
+        prng.seed(seed);
 
         switch (preset) {
             .coin => {
@@ -78,14 +81,14 @@ const SfxrParams = extern struct {
                 self.p_env_sustain = frnd(0.1);
                 self.p_env_decay = 0.1 + frnd(0.4);
                 self.p_env_punch = 0.3 + frnd(0.3);
-                if (rng.random.boolean()) {
+                if (rng.boolean()) {
                     self.p_arp_speed = 0.5 + frnd(0.2);
                     self.p_arp_mod = 0.2 + frnd(0.4);
                 }
             },
             .laser => {
                 self.wave_type = rnd(2);
-                if (self.wave_type == 2 and rng.random.boolean())
+                if (self.wave_type == 2 and rng.boolean())
                     self.wave_type = rnd(1);
                 self.p_base_freq = 0.5 + frnd(0.5);
                 self.p_freq_limit = self.p_base_freq - 0.2 - frnd(0.6);
@@ -96,7 +99,7 @@ const SfxrParams = extern struct {
                     self.p_freq_limit = frnd(0.1);
                     self.p_freq_ramp = -0.35 - frnd(0.3);
                 }
-                if (rng.random.boolean()) {
+                if (rng.boolean()) {
                     self.p_duty = frnd(0.5);
                     self.p_duty_ramp = frnd(0.2);
                 } else {
@@ -106,18 +109,18 @@ const SfxrParams = extern struct {
                 self.p_env_attack = 0.0;
                 self.p_env_sustain = 0.1 + frnd(0.2);
                 self.p_env_decay = frnd(0.4);
-                if (rng.random.boolean())
+                if (rng.boolean())
                     self.p_env_punch = frnd(0.3);
                 if (rnd(2) == 0) {
                     self.p_pha_offset = frnd(0.2);
                     self.p_pha_ramp = -frnd(0.2);
                 }
-                // if (rng.random.boolean())
+                // if (rng.boolean())
                 self.p_hpf_freq = frnd(0.3);
             },
             .explosion => {
                 self.wave_type = 3;
-                if (rng.random.boolean()) {
+                if (rng.boolean()) {
                     self.p_base_freq = 0.1 + frnd(0.4);
                     self.p_freq_ramp = -0.1 + frnd(0.4);
                 } else {
@@ -132,12 +135,12 @@ const SfxrParams = extern struct {
                 self.p_env_attack = 0.0;
                 self.p_env_sustain = 0.1 + frnd(0.3);
                 self.p_env_decay = frnd(0.5);
-                if (rng.random.boolean()) {
+                if (rng.boolean()) {
                     self.p_pha_offset = -0.3 + frnd(0.9);
                     self.p_pha_ramp = -frnd(0.3);
                 }
                 self.p_env_punch = 0.2 + frnd(0.6);
-                if (rng.random.boolean()) {
+                if (rng.boolean()) {
                     self.p_vib_strength = frnd(0.7);
                     self.p_vib_speed = frnd(0.6);
                 }
@@ -147,19 +150,19 @@ const SfxrParams = extern struct {
                 }
             },
             .power_up => {
-                if (rng.random.boolean()) {
+                if (rng.boolean()) {
                     self.wave_type = 1;
                 } else {
                     self.p_duty = frnd(0.6);
                 }
-                if (rng.random.boolean()) {
+                if (rng.boolean()) {
                     self.p_base_freq = 0.2 + frnd(0.3);
                     self.p_freq_ramp = 0.1 + frnd(0.4);
                     self.p_repeat_speed = 0.4 + frnd(0.4);
                 } else {
                     self.p_base_freq = 0.2 + frnd(0.3);
                     self.p_freq_ramp = 0.05 + frnd(0.2);
-                    if (rng.random.boolean()) {
+                    if (rng.boolean()) {
                         self.p_vib_strength = frnd(0.7);
                         self.p_vib_speed = frnd(0.6);
                     }
@@ -179,7 +182,7 @@ const SfxrParams = extern struct {
                 self.p_env_attack = 0.0;
                 self.p_env_sustain = frnd(0.1);
                 self.p_env_decay = 0.1 + frnd(0.2);
-                if (rng.random.boolean())
+                if (rng.boolean())
                     self.p_hpf_freq = frnd(0.3);
             },
             .jump => {
@@ -190,9 +193,9 @@ const SfxrParams = extern struct {
                 self.p_env_attack = 0.0;
                 self.p_env_sustain = 0.1 + frnd(0.3);
                 self.p_env_decay = 0.1 + frnd(0.2);
-                if (rng.random.boolean())
+                if (rng.boolean())
                     self.p_hpf_freq = frnd(0.3);
-                if (rng.random.boolean())
+                if (rng.boolean())
                     self.p_lpf_freq = 1.0 - frnd(0.6);
             },
             .blip => {
@@ -210,8 +213,8 @@ const SfxrParams = extern struct {
 };
 
 pub const SfxrDataSource = extern struct {
-    ds: ma_data_source_callbacks = undefined,
-    engine: *AudioEngine = undefined,
+    base: ma.ma_data_source_base,
+    engine: *AudioEngine,
 
     looping: bool = false,
     playing_sample: bool = true,
@@ -254,18 +257,21 @@ pub const SfxrDataSource = extern struct {
 
     pub fn create(engine: *AudioEngine) !*SfxrDataSource {
         var dds = try engine.allocator.create(SfxrDataSource);
-        dds.* = .{};
+        dds.* = .{.base = undefined, .engine = engine};
         dds.resetSample(false);
-        dds.ds = std.mem.zeroInit(ma_data_source_callbacks, .{
-            .onRead = onRead,
-            .onGetDataFormat = onGetDataFormat,
-        });
-        dds.engine = engine;
-
+        var result: ma.ma_result = undefined;
+        var baseConfig: ma.ma_data_source_config = undefined;
+        baseConfig = ma.ma_data_source_config_init();
+        baseConfig.vtable = &SfxrVtable.vtable;
+        result = ma.ma_data_source_init(&baseConfig, @ptrCast(?*ma.ma_data_source, &dds.*.base));
+        if (result != ma.MA_SUCCESS) {
+            return error.SfxrCreateFail;
+        }
         return dds;
     }
 
     pub fn destroy(self: *@This()) void {
+        ma.ma_data_source_uninit(@ptrCast(?*ma.ma_data_source, &self.*.base));
         self.engine.allocator.destroy(self);
     }
 
@@ -344,12 +350,28 @@ pub const SfxrDataSource = extern struct {
                 self.rep_limit = 0;
         }
     }
+};
 
-    fn onRead(data_source: ?*ma_data_source, frames_out: ?*c_void, frame_count: ma_uint64, frames_read: [*c]ma_uint64) callconv(.C) ma_result {
-        var self = @ptrCast(*SfxrDataSource, @alignCast(@alignOf(SfxrDataSource), data_source));
-        var out = @ptrCast([*]f32, @alignCast(@alignOf(f32), frames_out))[0..frame_count];
+pub const SfxrVtable = extern struct {
+    pub var vtable: ma.ma_data_source_vtable = ma.ma_data_source_vtable {
+        .onRead = my_data_source_read,
+        .onSeek = my_data_source_seek,
+        .onGetDataFormat = my_data_source_get_data_format,
+        .onGetCursor = my_data_source_get_cursor,
+        .onGetLength = my_data_source_get_length,
+        .onSetLooping = null,
+        .flags = 0,
+    };
+    pub fn my_data_source_read(arg_pDataSource: ?*ma.ma_data_source, arg_pFramesOut: ?*anyopaque, arg_frameCount: ma.ma_uint64, arg_pFramesRead: [*c]ma.ma_uint64) callconv(.C) ma.ma_result {
+        var pDataSource = arg_pDataSource;
+        var pFramesOut = arg_pFramesOut;
+        var pFrameCount = arg_frameCount;
+        var pFramesRead = arg_pFramesRead;
+        var self = @ptrCast(*SfxrDataSource, @alignCast(@alignOf(SfxrDataSource), pDataSource));
+        var out = @ptrCast([*]f32, @alignCast(@alignOf(f32), pFramesOut))[0..pFrameCount];
 
         for (out) |*frame, i| {
+            _ = i;
             self.rep_time += 1;
             if (self.rep_limit != 0 and self.rep_time >= self.rep_limit) {
                 self.rep_time = 0;
@@ -371,8 +393,8 @@ pub const SfxrDataSource = extern struct {
                         self.resetSample(false);
                     } else {
                         self.playing_sample = false;
-                        frames_read.* = i;
-                        return MA_AT_END;
+                        pFramesRead.* = 0;
+                        return ma.MA_AT_END;
                     }
                 }
             }
@@ -397,8 +419,8 @@ pub const SfxrDataSource = extern struct {
                         self.resetSample(false);
                     } else {
                         self.playing_sample = false;
-                        frames_read.* = i;
-                        return MA_AT_END;
+                        pFramesRead.* = 0;
+                        return ma.MA_AT_END;
                     }
                 }
             }
@@ -493,22 +515,45 @@ pub const SfxrDataSource = extern struct {
 
             frame.* = std.math.clamp(ssample, -1, 1);
         }
-        frames_read.* = frame_count;
-        return MA_SUCCESS;
+        pFramesRead.* = pFrameCount;
+        return ma.MA_SUCCESS;
     }
-
-    fn onSeek(data_source: ?*ma_data_source, frame_index: ma_uint64) callconv(.C) ma_result {
-        std.debug.print("onSeek: {d}\n", .{frame_index});
-        var base = @ptrCast(*SfxrDataSource, @alignCast(@alignOf(SfxrDataSource), data_source));
-        return MA_SUCCESS;
+    pub fn my_data_source_seek(arg_pDataSource: ?*ma.ma_data_source, arg_frameIndex: ma.ma_uint64) callconv(.C) ma.ma_result {
+        var pDataSource = arg_pDataSource;
+        _ = pDataSource;
+        var frameIndex = arg_frameIndex;
+        _ = frameIndex;
+        return ma.MA_SUCCESS;
     }
+    pub fn my_data_source_get_data_format(arg_pDataSource: ?*ma.ma_data_source, arg_pFormat: [*c]ma.ma_format, arg_pChannels: [*c]ma.ma_uint32, arg_pSampleRate: [*c]ma.ma_uint32, arg_pChannelMap: [*c]ma.ma_channel, arg_channelMapCap: usize) callconv(.C) ma.ma_result {
+        var pDataSource = arg_pDataSource;
+        var pFormat = arg_pFormat;
+        var pChannels = arg_pChannels;
+        var pSampleRate = arg_pSampleRate;
+        var pChannelMap = arg_pChannelMap;
+        _ = pChannelMap;
+        var channelMapCap = arg_channelMapCap;
+        _ = channelMapCap;
 
-    fn onGetDataFormat(data_source: ?*ma_data_source, format: [*c]ma_format, channels: [*c]ma_uint32, sample_rate: [*c]ma_uint32) callconv(.C) ma_result {
-        var base = @ptrCast(*SfxrDataSource, @alignCast(@alignOf(SfxrDataSource), data_source));
+        var base = @ptrCast(*SfxrDataSource, @alignCast(@alignOf(SfxrDataSource), pDataSource));
 
-        format.* = base.engine.engine.format;
-        channels.* = 1;
-        sample_rate.* = base.engine.engine.sampleRate;
-        return MA_SUCCESS;
+        pFormat.* = ma.ma_format_f32;
+        pChannels.* = 1;
+        pSampleRate.* = base.engine.engine.sampleRate;
+        return ma.MA_SUCCESS;
+    }
+    pub fn my_data_source_get_cursor(arg_pDataSource: ?*ma.ma_data_source, arg_pCursor: [*c]ma.ma_uint64) callconv(.C) ma.ma_result {
+        var pDataSource = arg_pDataSource;
+        _ = pDataSource;
+        var pCursor = arg_pCursor;
+        _ = pCursor;
+        return ma.MA_NOT_IMPLEMENTED;
+    }
+    pub fn my_data_source_get_length(arg_pDataSource: ?*ma.ma_data_source, arg_pLength: [*c]ma.ma_uint64) callconv(.C) ma.ma_result {
+        var pDataSource = arg_pDataSource;
+        _ = pDataSource;
+        var pLength = arg_pLength;
+        _ = pLength;
+        return ma.MA_NOT_IMPLEMENTED;
     }
 };
